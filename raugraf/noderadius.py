@@ -1,4 +1,8 @@
-#!/usr/bin/env python3
+# Copyright 2024 Dr K.D. Murray
+# This Source Code Form is subject to the terms of the Mozilla Public
+# License, v. 2.0. If a copy of the MPL was not distributed with this
+# file, You can obtain one at http://mozilla.org/MPL/2.0/.
+
 from tqdm import tqdm
 import natsort
 
@@ -38,13 +42,12 @@ def one_batch(nodes, G, jumps):
     return [(n, len(noderadius(G, n, jumps))) for n in nodes]
 
 def main(argv=None):
+    """Calculate the "node radius" metric from Teasdale et al (2024) from a PGGB GFA graph"""
     ap = argparse.ArgumentParser()
     ap.add_argument('-g', '--graph', required=True, type=Path,
             help = "Input pangenome graph as GFA file")
     ap.add_argument('-j', '--jumps', type=int, default=25,
             help= "How many nodes to traverse away from each seed node.")
-    #ap.add_argument('-t', '--threads', type=int, default=1,
-    #        help= "Num Parallel threads")
     ap.add_argument('-n','--node-table', type=Path,
             help = "Output local complexity per node (TSV)")
     ap.add_argument('-b','--node-bed', type=Path,
@@ -81,15 +84,6 @@ def main(argv=None):
     results = {}
     for node in tqdm(G, desc="Compute complexity".ljust(20), unit="nodes"):
         results[node]=len(noderadius(G, node, args.jumps))
-    #if args.threads == 1:
-    #else:
-    #    batches = batched(G, int(n_nodes/args.threads) + 1)
-    #    with multiprocessing.Pool(processes=args.threads) as pool:
-    #        with tqdm(total=n_nodes) as pbar:
-    #            batch = partial(one_batch, G=G, jumps=args.jumps)
-    #            for res in pool.imap(batch, batches):
-    #                pbar.update(len(res))
-    #                results.extend(res)
     print("\nComputed local complexity, outputing", file=stderr)
 
     if args.node_table:

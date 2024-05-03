@@ -1,3 +1,8 @@
+# Copyright 2024 Dr K.D. Murray
+# This Source Code Form is subject to the terms of the Mozilla Public
+# License, v. 2.0. If a copy of the MPL was not distributed with this
+# file, You can obtain one at http://mozilla.org/MPL/2.0/.
+
 from Bio import SeqIO
 from tqdm import tqdm
 
@@ -138,6 +143,7 @@ def batch_node_radii(G, nodes, num_steps):
 
 
 def main(argv=None):
+    """A minimizer-based approximation of the "node radius" metric from Teasdale et al (2024), direct from Fastas"""
     ap = argparse.ArgumentParser()
     ap.add_argument("--threads", "-t", default=os.cpu_count(), type=int,
             help="Number of compute threads")
