@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 # Copyright 2024 Dr K.D. Murray
 # This Source Code Form is subject to the terms of the Mozilla Public
 # License, v. 2.0. If a copy of the MPL was not distributed with this
@@ -30,16 +31,6 @@ def noderadius(G, source_node, num_steps, nodes_seen=None):
                 noderadius(G, nbr, num_steps-1, nodes_seen)
     return nodes_seen
 
-
-def batched(iterable, n=1):
-    if n < 1:
-        raise ValueError('n must be at least one')
-    it = iter(iterable)
-    while (batch := tuple(islice(it, n))):
-        yield batch
-
-def one_batch(nodes, G, jumps):
-    return [(n, len(noderadius(G, n, jumps))) for n in nodes]
 
 def main(argv=None):
     """Calculate the "node radius" metric from Teasdale et al (2024) from a PGGB GFA graph"""
@@ -83,7 +74,7 @@ def main(argv=None):
     print("\nCalculating local complexity over", n_nodes, "nodes", file=stderr)
     results = {}
     for node in tqdm(G, desc="Compute complexity".ljust(20), unit="nodes"):
-        results[node]=len(noderadius(G, node, args.jumps))
+        results[node] = len(noderadius(G, node, args.jumps))
     print("\nComputed local complexity, outputing", file=stderr)
 
     if args.node_table:
