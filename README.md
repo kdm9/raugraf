@@ -2,7 +2,15 @@
 
 Pangenomic diversity metrics
 
-# Local Complexity/Node Radius
+# Install
+
+```
+pipx install raugraf
+```
+
+# Tools
+
+## Local Complexity/Node Radius
 
 ```
 raugraf local-complexity \
