@@ -7,9 +7,32 @@ requires = [
 ]
 build-backend = 'setuptools.build_meta'
 
+[project]
+name = "raugraf"
+dynamic = ["version"]
+requires-python = ">=3.8"
+dependencies = [
+  "tqdm",
+  "natsort",
+]
+authors = [
+    {name = "K.D. Murray", email="foss@kdmurray.id.au"},
+]
+readme = "README.md"
+classifiers = [
+    "License :: OSI Approved :: Mozilla Public License 2.0 (MPL 2.0)",
+    "Topic :: Scientific/Engineering :: Bio-Informatics",
+    "Environment :: Console",
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Science/Research",
+    "Operating System :: POSIX",
+    "Programming Language :: Python :: 3",
+]
+
 [tool.setuptools_scm]
 write_to = "raugraf/_version.py"
 local_scheme = "no-local-version"
+
 [project.scripts]
 raugraf = "raugraf:main"
 

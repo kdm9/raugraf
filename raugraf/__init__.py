@@ -12,10 +12,10 @@ import sys
 cmds = {}
 
 from .noderadius import main as noderadius_main
-cmds["gfa"] = noderadius_main
+cmds["local-complexity"] = noderadius_main
 
-from .minimizer_diversity import main as minimizer_main
-cmds["minimizer"] = minimizer_diversity
+#from .minimizer_diversity import main as minimizer_main
+#cmds["minimizer"] = minimizer_diversity
 
 def mainhelp(argv=None):
     """Print this help message"""
