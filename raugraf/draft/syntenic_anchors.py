@@ -20,13 +20,10 @@ def main(argv=None):
             help="Only output nodes with >= this depth")
     ap.add_argument('-D', '--max-depth', type=int,
             help="Only output nodes with <= this depth")
-    ap.add_argument('-b','--node-bed', type=Path,
+    ap.add_argument('-o','--out-tsv', type=Path,  default="/dev/stdout",
             help = "Output local complexity along each path as bedGraph file")
 
     args = ap.parse_args(argv)
-
-    if args.node_table is None and args.node_bed is None:
-        ap.error("Must give at least one of --node-table and/or --node-bed")
 
     #G = defaultdict(set)
     nodelength = dict()
@@ -44,7 +41,7 @@ def main(argv=None):
                 #G[left].add(right)
                 #G[right].add(left)
                 pass
-            if L[0] == "P" and args.node_bed is not None:
+            if L[0] == "P":
                 n = L[1]
                 P = list(map(lambda x: int(x.rstrip("+-")), L[2].split(',')))
                 for node in P:
@@ -54,23 +51,34 @@ def main(argv=None):
     mean_node_len = sum(nodelength.values())/n_nodes
     print(f"Graph done, {n_nodes} nodes, {len(paths)} paths, mean node length {mean_node_len:0.1f} bp.", file=stderr)
 
-    with open(args.node_bed, "w") as ofh:
+    total_depth = {}
+    unique_depth = {}
+    for node in tqdm(node_paths, desc="Compute node depths".ljust(20), unit="nodes"):
+        np = node_paths[node]
+        td = len(np)
+        if args.min_depth and td < args.min_depth:
+            continue
+        if args.max_depth and td > args.max_depth:
+            continue
+        ud = len(set(np))
+        if args.min_depth and ud < args.min_depth:
+            continue
+        if args.max_depth and ud > args.max_depth:
+            continue
+        total_depth[node] = td
+        unique_depth[node] = ud
+    
+
+    with open(args.out_tsv, "w") as ofh:
         print("#path", "left", "right", "node", "total_depth", "unique_depth", sep="\t", file=ofh)
-        for path in tqdm(natsort.natsorted(paths), desc="Traverse Paths".ljust(20), total=len(paths), unit="paths"):
+        for path in natsort.natsorted(paths):
             left = 0
-            for node in paths[path]:
+            for node in tqdm(paths[path], desc=f"Traverse {path}".ljust(20), unit="nodes"):
                 nodel = nodelength[node]
                 right = left + nodel
-                np = node_paths[node]
-                td = len(np)
-                ud = len(set(np))
-                thisleft = left
+                if node in total_depth:
+                    print(path, left, right, node, total_depth[node], unique_depth[node], sep="\t", file=ofh)
                 left = right
-                if args.min_depth and (td < args.min_depth or ud < args.min_depth):
-                    continue
-                if args.max_depth and (td > args.max_depth or ud > args.max_depth):
-                    continue
-                print(path, thisleft, right, node, len(np), len(set(np)), sep="\t", file=ofh)
 
 
 if __name__ == '__main__':
