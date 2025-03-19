@@ -15,6 +15,9 @@ cmds = {}
 from .noderadius import main as noderadius_main
 cmds["local-complexity"] = noderadius_main
 
+from .draft.orthograf import main as orthograf_main
+cmds["orthograf"] = orthograf_main
+
 #from .minimizer_diversity import main as minimizer_main
 #cmds["minimizer"] = minimizer_diversity
 
@@ -23,8 +26,9 @@ def mainhelp(argv=None):
     print("USAGE: raugraf <subtool> [options...]\n\n")
     print("Where <subtool> is one of:\n")
     for tool, func in cmds.items():
-        print("  {:<19}".format(tool + ":"), " ", func.__doc__.split("\n")[0])
-    print("\n\nUse raugraf <subtool> --help to get help about a specific tool")
+        aster = "*" if "DRAFT" in func.__doc__ else ""
+        print(f"  {tool+aster+':':<19} {func.__doc__.split('\n')[0]}")
+    print("\n\nUse raugraf <subtool> --help to get help about a specific tool. Tools with an asterix are drafts and should not be trusted yet")
 
 cmds["help"] = mainhelp
 
@@ -36,4 +40,7 @@ def main():
         print("ERROR:", argv[1], "is not a known subtool. See help below")
         mainhelp()
         exit(1)
-    cmds[argv[1]](argv[2:])
+    func = cmds[argv[1]]
+    if "DRAFT" in func.__doc__:
+        print("YOU ARE USING A DRAFT TOOL. If it breaks, you get to keep both pieces. Any feedback welcome.")
+    func(argv[2:])
