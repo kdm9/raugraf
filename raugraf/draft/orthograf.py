@@ -2,14 +2,16 @@ import os
 import re
 import json
 from collections import defaultdict
-import gffutils
 import itertools
 import sys
 from sys import stderr
 from collections import defaultdict
-import numpy as np
 from statistics import mean
 from itertools import combinations
+from math import ceil, pow
+
+
+import gffutils
 
 
 def parse_chromosome_info(chrom_name):
@@ -21,8 +23,7 @@ def parse_chromosome_info(chrom_name):
         sample = '_'.join(parts[:-2])  # Handle sample names that might contain underscores
         return sample, hap, chrom
     else:
-        # Fallback if naming convention doesn't match
-        return chrom_name, 'unknown', chrom_name
+        raise ValueError("Your contigs aren't named according to the PanSN naming spec, or --pansn-chr is wrong")
 
 def load_orthogroup_mapping(tsv_file, mode="diamond"):
     """Load gene ID to orthogroup ID mapping from TSV file"""
@@ -46,7 +47,7 @@ def load_orthogroup_mapping(tsv_file, mode="diamond"):
     print(f"Loaded mapping of {len(gid2oid)} genes to {len(set(gid2oid.values()))} orthogroups", file=stderr)
     return gid2oid
 
-def extract_gene_order_from_gff(gff_file, orthogroup_map, feature_type='gene'):
+def extract_gene_order_from_gff(gff_file, orthogroup_map, feature_type='gene', pansn_chr="_"):
     """Extract ordered list of orthogroups from a GFF3 file based on gene positions"""
     print(f"Processing GFF file: {gff_file}", file=stderr)
     
@@ -354,7 +355,7 @@ def _get_position_combinations(positions_by_path, path_idxs):
     # If combinations would exceed threshold, limit each list further
     max_safe_combinations = 100
     if total_combinations > max_safe_combinations:
-        reduction_factor = int(np.ceil(np.power(total_combinations / max_safe_combinations, 1/len(position_lists))))
+        reduction_factor = int(ceil(pow(total_combinations / max_safe_combinations, 1/len(position_lists))))
         position_lists = [lst[:max(1, len(lst) // reduction_factor)] for lst in position_lists]
     
     return itertools.product(*position_lists)
@@ -522,7 +523,7 @@ def identify_neighbourhoods(colinear_segments, sample_info, gene_positions_list,
     
     return neighbourhoods
 
-def main(gff_files, orthogroup_map, min_shared_paths=3, min_segment_length=5, bedfile=None, neighbourhood_file=None):
+def orthograf(gff_files, orthogroup_map, min_shared_paths=3, min_segment_length=5, bedfile=None, neighbourhood_file=None, pansn_chr="_"):
     """Main function to process GFF files and analyze orthogroup paths"""
     # Process all GFF files provided on the command line
     all_paths = {}
@@ -531,14 +532,19 @@ def main(gff_files, orthogroup_map, min_shared_paths=3, min_segment_length=5, be
             print(f"Warning: GFF file '{gff_path}' does not exist. Skipping.", file=stderr)
             continue
             
-        chromosome_paths = extract_gene_order_from_gff(gff_path, orthogroup_map)
+        chromosome_paths = extract_gene_order_from_gff(gff_path, orthogroup_map, pansn_chr=pansn_chr)
         all_paths.update(chromosome_paths)
     
     chromosome_groups = group_paths_by_chromosome(all_paths)
     
     results = {}
+    print("\n")
     for chrom, paths_info in chromosome_groups.items():
-        print(f"\nAnalyzing chromosome {chrom} across {len(paths_info)} samples/haplotypes", file=stderr)
+        if len(paths_info) < min_shared_paths:
+            print(f"Skip {chrom} as it has only {len(paths_info)} samples", file=stderr)
+            continue
+
+        print(f"Analyzing chromosome {chrom} across {len(paths_info)} samples/haplotypes", file=stderr)
         
         just_paths = [p['path'] for p in paths_info]
         gene_positions_list = [p['gene_positions'] for p in paths_info]
@@ -580,6 +586,7 @@ def main(gff_files, orthogroup_map, min_shared_paths=3, min_segment_length=5, be
         # Print summary
         print(f"Found {len(colinear_segments)} co-linear segments shared by at least {min_shared_paths} samples", file=stderr)
         print(f"Found {len(neighbourhoods)} neighbourhoods between syntenic blocks", file=stderr)
+        print("\n")
     
     if bedfile:
         for chrom, result in results.items():
@@ -616,15 +623,16 @@ def main(argv=None):
     parser.add_argument('--min-length', type=int, default=5, help='Minimum length of co-linear segments in genes')
     parser.add_argument('--out-syntbed', help="Bedfile output for syntenic regions", type=argparse.FileType("wt"))
     parser.add_argument('--out-nhbed', help="Bedfile output for neighbourhood regions", type=argparse.FileType("wt"))
-    parser.add_argument('--out-json', help="JSON data dump output")
+    parser.add_argument('--out-json', help="JSON data dump output", type=argparse.FileType("wt"))
+    parser.add_argument('--pansn-chr', default="_", help="Separator between sample, hap, and chrom in PanSN names (see PanSN spec, default is _ NOT #)")
     
     args = parser.parse_args(argv)
     og_mapping = load_orthogroup_mapping(args.ogs, args.og_format)
-    res = main(args.gff_files, og_mapping, args.min_shared, args.min_length, 
-               bedfile=args.out_syntbed, neighbourhood_file=args.out_nhbed)
+    res = orthograf(args.gff_files, og_mapping, args.min_shared, args.min_length, 
+               bedfile=args.out_syntbed, neighbourhood_file=args.out_nhbed,
+               pansn_chr=args.pansn_chr)
     if args.out_json is not None:
-        with open(args.out_json, "w") as fh:
-            json.dump(res, fh, indent=4)
+        json.dump(res, args.out_json, indent=4)
 
 if __name__ == "__main__":
     main()
